@@ -1,26 +1,37 @@
-﻿using RabbitMQ.Client;
+﻿using Commons;
+using RabbitMQ.Client;
+using System;
 using System.Text;
 
-namespace Producer;
-public class Sender
-{ 
+class Sender
+{
     public static void Main(string[] args)
     {
-        var factory = new ConnectionFactory() { HostName = "localhost" };
-        using (var connection = factory.CreateConnection()) 
-        using (var chanel = connection.CreateModel())
-        {
-            chanel.QueueDeclare("BasicTest", false, false, false, null);
+        //Configuration
+        string exchange = RabbitMQConstants.Exchange;
+        string routingKey = RabbitMQConstants.RoutingKey;
+        string queue = RabbitMQConstants.Queue;
+        string hostName = RabbitMQConstants.HostName;
 
-            string message = "Getting Started with .NET RabbitMQ";
-            var body = Encoding.UTF8.GetBytes(message);
+        // Criando a conexão com o RabbitMQ
+        var factory = new ConnectionFactory() { HostName = hostName };
+        using var connection = factory.CreateConnection();
+        using var channel = connection.CreateModel();
 
-            chanel.BasicPublish("", "BasicTest", null, body);
+        // Criando o Exchange e a Fila
+        channel.ExchangeDeclare(exchange, ExchangeType.Direct, durable: true);
+        channel.QueueDeclare(queue, false, false, false, null);
 
-            Console.WriteLine($"Send message {message}...");
-        }
+        // Ligando a Fila ao Exchange
+        channel.QueueBind(queue, exchange, routingKey);
 
-        Console.WriteLine("Press [Ente] to exit the Sender App...");
+        // Enviando a mensagem
+        string message = "Getting Started with .NET RabbitMQ";
+        var body = Encoding.UTF8.GetBytes(message);
+
+        channel.BasicPublish(exchange, routingKey, null, body);
+
+        Console.WriteLine($"Send message: {message}...");
         Console.ReadLine();
     }
 }
